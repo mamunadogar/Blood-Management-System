@@ -1,111 +1,95 @@
-CREATE DATABASE BloodDonationSystem;
-
-CREATE TABLE Donor(
-    DonorID SERIAL PRIMARY KEY,
-    Name VARCHAR(50),
-    BloodGroup VARCHAR(5),
-    City VARCHAR(50),
-    ContactNo VARCHAR(15)
+CREATE DATABASE  blood_donation_db;
+USE blood_donation_db;
+CREATE TABLE  donors (
+    donor_id     INT AUTO_INCREMENT PRIMARY KEY,
+    full_name    VARCHAR(100) NOT NULL,
+    blood_group  VARCHAR(5)   NOT NULL,
+    city         VARCHAR(50)  NOT NULL,
+    contact_no   VARCHAR(15)  NOT NULL,
+    is_available TINYINT(1)  DEFAULT 1,
+    registered_at DATETIME  DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE Patient(
-    PatientID SERIAL PRIMARY KEY,
-    Name VARCHAR(50),
-    BloodGroup VARCHAR(5),
-    City VARCHAR(50),
-    ContactNo VARCHAR(15)
+CREATE TABLE  blood_requests (
+    request_id   INT AUTO_INCREMENT PRIMARY KEY,
+    patient_name VARCHAR(100) NOT NULL,
+    blood_group  VARCHAR(5)   NOT NULL,
+    city         VARCHAR(50)  NOT NULL,
+    contact_no   VARCHAR(15)  NOT NULL,
+    urgency      ENUM('Low','Medium','High') DEFAULT 'Medium',
+    status       ENUM('Pending','Fulfilled','Cancelled') DEFAULT 'Pending',
+    request_date DATETIME  DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE TABLE BloodRequest(
-    RequestID SERIAL PRIMARY KEY,
-    PatientID INT,
-    BloodGroup VARCHAR(5),
-    RequestDate DATE,
-    Status VARCHAR(20),
-
-    FOREIGN KEY(PatientID)
-    REFERENCES Patient(PatientID)
-);
-
-CREATE TABLE Donation(
-    DonationID SERIAL PRIMARY KEY,
-    DonorID INT,
-    RequestID INT,
-    DonationDate DATE,
-    Status VARCHAR(20),
-
-    FOREIGN KEY(DonorID)
-    REFERENCES Donor(DonorID),
-
-    FOREIGN KEY(RequestID)
-    REFERENCES BloodRequest(RequestID)
-);
-
-CREATE TABLE Admin(
-    AdminID SERIAL PRIMARY KEY,
-    Name VARCHAR(50),
-    Username VARCHAR(30),
-    Password VARCHAR(30)
-);
-
-INSERT INTO Donor(Name,BloodGroup,City,ContactNo)
+INSERT INTO donors (full_name, blood_group, city, contact_no)
 VALUES
-('Ali Khan','A+','Lahore','03001111111'),
-('Ahmed Raza','B+','Islamabad','03002222222'),
-('Usman Tariq','O+','Faisalabad','03003333333');
-
-INSERT INTO Patient(Name,BloodGroup,City,ContactNo)
+  ('Ali Hassan',     'A+',  'Lahore',    '03001234567'),
+  ('Sara Malik',     'B+',  'Karachi',   '03111234567'),
+  ('Usman Khan',     'O+',  'Lahore',    '03211234567'),
+  ('Fatima Noor',    'AB+', 'Islamabad', '03311234567'),
+  ('Zain Butt',      'O-',  'Lahore',    '03411234567'),
+  ('Hina Raza',      'A-',  'Karachi',   '03511234567'),
+  ('Bilal Ahmed',    'B-',  'Islamabad', '03611234567'),
+  ('Amna Sheikh',    'A+',  'Lahore',    '03711234567');
+  INSERT INTO blood_requests (patient_name, blood_group, city, contact_no, urgency)
 VALUES
-('Bilal Ahmed','A+','Lahore','03111111111'),
-('Hamza Khan','O+','Karachi','03222222222');
-
-INSERT INTO BloodRequest(PatientID,BloodGroup,RequestDate,Status)
-VALUES
-(1,'A+',CURRENT_DATE,'Pending'),
-(2,'O+',CURRENT_DATE,'Pending');
-
-INSERT INTO Donation(DonorID,RequestID,DonationDate,Status)
-VALUES
-(1,1,CURRENT_DATE,'Completed');
-
-INSERT INTO Admin(Name,Username,Password)
-VALUES
-('Admin','admin','admin123');
-
-UPDATE BloodRequest
-SET Status='Completed'
-WHERE RequestID=1;
-
-SELECT * FROM Donor;
-
-SELECT * FROM Patient;
-
-SELECT * FROM BloodRequest;
-
+  ('Raza Hussain',  'A+',  'Lahore',    '03001112233', 'High'),
+  ('Nadia Parveen', 'O+',  'Karachi',   '03111112233', 'Medium'),
+  ('Tariq Mehmood', 'B+',  'Islamabad', '03211112233', 'Low'),
+  ('Sana Iqbal',    'AB+', 'Lahore',    '03311112233', 'High');
+  SELECT donor_id, full_name, blood_group, city, contact_no, is_available
+FROM donors
+ORDER BY full_name ASC;
+SELECT full_name, blood_group, city, contact_no
+FROM donors
+WHERE blood_group = 'A+'
+  AND is_available = 1
+ORDER BY city ASC;
+SELECT full_name, blood_group, city, contact_no
+FROM donors
+WHERE blood_group = 'O+'
+  AND city = 'Lahore'
+  AND is_available = 1;
+  SELECT full_name, blood_group, city, contact_no
+FROM donors
+WHERE full_name LIKE '%Ali%';
+SELECT blood_group,
+       COUNT(*) AS total_donors
+FROM donors
+WHERE is_available = 1
+GROUP BY blood_group
+ORDER BY total_donors DESC;
+UPDATE donors
+SET is_available = 0
+WHERE donor_id = 1;
+UPDATE donors
+SET contact_no = '03009999999'
+WHERE donor_id = 2;
+DELETE FROM donors
+WHERE donor_id = 3;
+UPDATE blood_requests
+SET status = 'Fulfilled'
+WHERE request_id = 1;
 SELECT
-D.Name,
-D.BloodGroup,
-D.City,
-P.Name AS PatientName,
-BR.Status
-FROM Donation DN
-JOIN Donor D ON DN.DonorID=D.DonorID
-JOIN BloodRequest BR ON DN.RequestID=BR.RequestID
-JOIN Patient P ON BR.PatientID=P.PatientID;
-
-SELECT COUNT(*) AS TotalDonors
-FROM Donor;
-
-SELECT COUNT(*) AS TotalPatients
-FROM Patient;
-
-SELECT COUNT(*) AS TotalRequests
-FROM BloodRequest;
-
-SELECT *
-FROM Donor
-WHERE BloodGroup='A+';
-
-SELECT *
-FROM Donor
-WHERE City='Lahore';
+    r.request_id,
+    r.patient_name,
+    r.blood_group,
+    r.city          AS patient_city,
+    r.urgency,
+    d.full_name     AS matched_donor,
+    d.contact_no    AS donor_contact
+FROM blood_requests r
+JOIN donors d
+    ON  d.blood_group = r.blood_group
+    AND d.city        = r.city
+    AND d.is_available = 1
+WHERE r.status = 'Pending'
+ORDER BY r.urgency DESC;
+SELECT request_id, patient_name, blood_group, city, contact_no
+FROM blood_requests
+WHERE status = 'Pending'
+  AND urgency = 'High'
+ORDER BY request_date ASC;
+SELECT city, COUNT(*) AS donor_count
+FROM donors
+WHERE is_available = 1
+GROUP BY city
+ORDER BY donor_count DESC;
